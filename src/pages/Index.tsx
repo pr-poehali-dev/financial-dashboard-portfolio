@@ -4,16 +4,30 @@ import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Progress } from "@/components/ui/progress";
 import { Slider } from "@/components/ui/slider";
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { Badge } from "@/components/ui/badge";
+import { useToast } from "@/hooks/use-toast";
 import Icon from "@/components/ui/icon";
 
 const Index = () => {
   const [activeTab, setActiveTab] = useState("dashboard");
   const [investmentAmount, setInvestmentAmount] = useState([1000]);
+  const [depositDialogOpen, setDepositDialogOpen] = useState(false);
+  const [withdrawDialogOpen, setWithdrawDialogOpen] = useState(false);
+  const [depositAmount, setDepositAmount] = useState("");
+  const [withdrawAmount, setWithdrawAmount] = useState("");
+  const [withdrawCard, setWithdrawCard] = useState("");
+  const [filterType, setFilterType] = useState("all");
+  const { toast } = useToast();
 
   const stats = {
     balance: 125430.50,
+    availableBalance: 8450.30,
     profit24h: 1234.56,
-    profitPercent: 2.4,
+    profitPercent: 10.6,
     partners: 47,
     withdrawn: 89500.00,
     totalInvested: 50000.00,
@@ -24,17 +38,18 @@ const Index = () => {
   };
 
   const deposits = [
-    { id: 1, amount: 20000, progress: 65, daysLeft: 14, rate: 5.5 },
-    { id: 2, amount: 15000, progress: 42, daysLeft: 23, rate: 4.8 },
-    { id: 3, amount: 15000, progress: 88, daysLeft: 5, rate: 6.2 }
+    { id: 1, amount: 20000, progress: 65, daysLeft: 14, rate: 10.6, earned: 13780 },
+    { id: 2, amount: 15000, progress: 42, daysLeft: 23, rate: 10.6, earned: 6678 },
+    { id: 3, amount: 15000, progress: 88, daysLeft: 5, rate: 10.6, earned: 13992 }
   ];
 
   const transactions = [
-    { id: 1, type: "deposit", amount: 5000, date: "2026-01-14", status: "completed" },
-    { id: 2, type: "profit", amount: 850, date: "2026-01-14", status: "completed" },
-    { id: 3, type: "withdrawal", amount: 2000, date: "2026-01-13", status: "pending" },
-    { id: 4, type: "referral", amount: 1250, date: "2026-01-13", status: "completed" },
-    { id: 5, type: "deposit", amount: 10000, date: "2026-01-12", status: "completed" }
+    { id: 1, type: "deposit", amount: 5000, date: "2026-01-14 15:23", status: "completed" },
+    { id: 2, type: "profit", amount: 850, date: "2026-01-14 12:00", status: "completed" },
+    { id: 3, type: "withdrawal", amount: 2000, date: "2026-01-13 18:45", status: "pending" },
+    { id: 4, type: "referral", amount: 1250, date: "2026-01-13 14:20", status: "completed" },
+    { id: 5, type: "deposit", amount: 10000, date: "2026-01-12 10:15", status: "completed" },
+    { id: 6, type: "bonus", amount: 100, date: "2026-01-12 09:30", status: "completed" }
   ];
 
   const referrals = [
@@ -44,20 +59,79 @@ const Index = () => {
     { id: 4, username: "User_9876", deposits: 500, earnings: 125, date: "2026-01-03", active: false }
   ];
 
+  const bonusTasks = [
+    { id: "chat", title: "Вступить в чат проекта", reward: 100, completed: false, icon: "MessageCircle" },
+    { id: "referrals", title: "Пригласить 25 друзей", reward: 2000, completed: false, progress: 4, target: 25, icon: "Users" }
+  ];
+
   const calculateProfit = (amount: number) => {
-    const dailyRate = 0.055;
+    const dailyRate = 0.106;
     const days = 30;
     return (amount * dailyRate * days).toFixed(2);
   };
 
+  const handleDeposit = () => {
+    if (!depositAmount || Number(depositAmount) < 100) {
+      toast({
+        title: "Ошибка",
+        description: "Минимальная сумма пополнения 100₽",
+        variant: "destructive"
+      });
+      return;
+    }
+    toast({
+      title: "Реквизиты для оплаты",
+      description: `Переведите ${depositAmount}₽ на карту 2202 2063 4578 9012 и нажмите "Проверить оплату"`,
+    });
+  };
+
+  const handleWithdraw = () => {
+    if (!withdrawAmount || Number(withdrawAmount) < 100) {
+      toast({
+        title: "Ошибка",
+        description: "Минимальная сумма вывода 100₽",
+        variant: "destructive"
+      });
+      return;
+    }
+    if (Number(withdrawAmount) > stats.availableBalance) {
+      toast({
+        title: "Недостаточно средств",
+        description: `Доступно для вывода: ${stats.availableBalance.toFixed(2)}₽`,
+        variant: "destructive"
+      });
+      return;
+    }
+    if (!withdrawCard || withdrawCard.length < 16) {
+      toast({
+        title: "Ошибка",
+        description: "Введите корректный номер карты",
+        variant: "destructive"
+      });
+      return;
+    }
+    toast({
+      title: "Заявка принята",
+      description: `Вывод ${withdrawAmount}₽ на карту ${withdrawCard} обрабатывается`,
+    });
+    setWithdrawDialogOpen(false);
+  };
+
+  const filteredTransactions = transactions.filter(tx => 
+    filterType === "all" || tx.type === filterType
+  );
+
   return (
-    <div className="min-h-screen bg-background">
+    <div className="min-h-screen bg-background pb-20">
       <div className="container mx-auto px-4 py-6 max-w-7xl">
-        <header className="mb-8 animate-fade-in">
-          <div className="flex items-center justify-between mb-6">
-            <h1 className="text-3xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
-              Passive Capital
-            </h1>
+        <header className="mb-6 animate-fade-in">
+          <div className="flex items-center justify-between mb-4">
+            <div>
+              <h1 className="text-2xl font-bold bg-gradient-to-r from-primary to-secondary bg-clip-text text-transparent">
+                Invest Passive
+              </h1>
+              <p className="text-xs text-muted-foreground">Пассивный доход 10.6% в день</p>
+            </div>
             <div className="flex items-center gap-3">
               <Button variant="outline" size="sm" className="gap-2">
                 <Icon name="Bell" size={18} />
@@ -70,241 +144,163 @@ const Index = () => {
         </header>
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-6">
-          <TabsList className="grid w-full grid-cols-4 lg:w-auto lg:inline-grid bg-card/50 p-1">
-            <TabsTrigger value="dashboard" className="gap-2">
-              <Icon name="LayoutDashboard" size={18} />
-              <span className="hidden sm:inline">Dashboard</span>
+          <TabsList className="grid w-full grid-cols-4 bg-card/50 p-1">
+            <TabsTrigger value="dashboard" className="gap-1.5 text-xs">
+              <Icon name="LayoutDashboard" size={16} />
+              <span className="hidden sm:inline">Главная</span>
             </TabsTrigger>
-            <TabsTrigger value="portfolio" className="gap-2">
-              <Icon name="TrendingUp" size={18} />
+            <TabsTrigger value="portfolio" className="gap-1.5 text-xs">
+              <Icon name="TrendingUp" size={16} />
               <span className="hidden sm:inline">Портфель</span>
             </TabsTrigger>
-            <TabsTrigger value="wallet" className="gap-2">
-              <Icon name="Wallet" size={18} />
+            <TabsTrigger value="wallet" className="gap-1.5 text-xs">
+              <Icon name="Wallet" size={16} />
               <span className="hidden sm:inline">Кошелёк</span>
             </TabsTrigger>
-            <TabsTrigger value="referral" className="gap-2">
-              <Icon name="Users" size={18} />
-              <span className="hidden sm:inline">Партнёры</span>
+            <TabsTrigger value="bonuses" className="gap-1.5 text-xs">
+              <Icon name="Gift" size={16} />
+              <span className="hidden sm:inline">Бонусы</span>
             </TabsTrigger>
           </TabsList>
 
-          <TabsContent value="dashboard" className="space-y-6 animate-fade-in">
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
-              <Card className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20 hover-scale cursor-pointer">
-                <div className="flex items-center justify-between mb-2">
-                  <Icon name="Wallet" size={24} className="text-primary" />
+          <TabsContent value="dashboard" className="space-y-4 animate-fade-in">
+            <div className="grid grid-cols-2 gap-3">
+              <Card className="p-4 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon name="Wallet" size={20} className="text-primary" />
                   <span className="text-xs text-muted-foreground">Баланс</span>
                 </div>
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-bold">${stats.balance.toLocaleString()}</h3>
-                  <p className="text-xs text-green-500 flex items-center gap-1">
-                    <Icon name="TrendingUp" size={14} />
-                    +{stats.profitPercent}% за 24ч
-                  </p>
-                </div>
+                <h3 className="text-xl font-bold">{stats.balance.toLocaleString()}₽</h3>
+                <p className="text-xs text-green-500 flex items-center gap-1 mt-1">
+                  <Icon name="TrendingUp" size={12} />
+                  +{stats.profitPercent}% за 24ч
+                </p>
               </Card>
 
-              <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20 hover-scale cursor-pointer">
-                <div className="flex items-center justify-between mb-2">
-                  <Icon name="DollarSign" size={24} className="text-green-500" />
-                  <span className="text-xs text-muted-foreground">Прибыль 24ч</span>
+              <Card className="p-4 bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon name="DollarSign" size={20} className="text-green-500" />
+                  <span className="text-xs text-muted-foreground">Доход 24ч</span>
                 </div>
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-bold text-green-500">+${stats.profit24h.toLocaleString()}</h3>
-                  <p className="text-xs text-muted-foreground">Суточный доход</p>
-                </div>
+                <h3 className="text-xl font-bold text-green-500">+{stats.profit24h.toLocaleString()}₽</h3>
+                <p className="text-xs text-muted-foreground mt-1">Суточный</p>
               </Card>
 
-              <Card className="p-6 bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20 hover-scale cursor-pointer">
-                <div className="flex items-center justify-between mb-2">
-                  <Icon name="Users" size={24} className="text-secondary" />
+              <Card className="p-4 bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon name="Users" size={20} className="text-secondary" />
                   <span className="text-xs text-muted-foreground">Партнёры</span>
                 </div>
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-bold">{stats.partners}</h3>
-                  <p className="text-xs text-muted-foreground">{stats.activeReferrals} активных</p>
-                </div>
+                <h3 className="text-xl font-bold">{stats.partners}</h3>
+                <p className="text-xs text-muted-foreground mt-1">{stats.activeReferrals} активных</p>
               </Card>
 
-              <Card className="p-6 bg-gradient-to-br from-orange-500/10 to-orange-500/5 border-orange-500/20 hover-scale cursor-pointer">
-                <div className="flex items-center justify-between mb-2">
-                  <Icon name="ArrowUpRight" size={24} className="text-orange-500" />
+              <Card className="p-4 bg-gradient-to-br from-orange-500/10 to-orange-500/5 border-orange-500/20">
+                <div className="flex items-center gap-2 mb-2">
+                  <Icon name="ArrowUpRight" size={20} className="text-orange-500" />
                   <span className="text-xs text-muted-foreground">Выведено</span>
                 </div>
-                <div className="space-y-1">
-                  <h3 className="text-2xl font-bold">${stats.withdrawn.toLocaleString()}</h3>
-                  <p className="text-xs text-muted-foreground">Всего выплат</p>
-                </div>
+                <h3 className="text-xl font-bold">{stats.withdrawn.toLocaleString()}₽</h3>
+                <p className="text-xs text-muted-foreground mt-1">Всего</p>
               </Card>
             </div>
 
-            <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
-              <Card className="lg:col-span-2 p-6">
-                <div className="flex items-center justify-between mb-6">
-                  <h2 className="text-xl font-semibold">Быстрые действия</h2>
-                </div>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                  <Button className="h-auto py-6 bg-gradient-to-r from-primary to-primary/80 hover:from-primary/90 hover:to-primary/70">
-                    <div className="flex items-center gap-3">
-                      <Icon name="Plus" size={24} />
-                      <div className="text-left">
-                        <div className="font-semibold">Пополнить баланс</div>
-                        <div className="text-xs opacity-90">Минимум $100</div>
-                      </div>
-                    </div>
-                  </Button>
-                  <Button variant="outline" className="h-auto py-6 border-secondary/30 hover:bg-secondary/10">
-                    <div className="flex items-center gap-3">
-                      <Icon name="MessageCircle" size={24} className="text-secondary" />
-                      <div className="text-left">
-                        <div className="font-semibold">Форум</div>
-                        <div className="text-xs text-muted-foreground">Поддержка 24/7</div>
-                      </div>
-                    </div>
-                  </Button>
-                  <Button variant="outline" className="h-auto py-6 border-green-500/30 hover:bg-green-500/10">
-                    <div className="flex items-center gap-3">
-                      <Icon name="ArrowDownToLine" size={24} className="text-green-500" />
-                      <div className="text-left">
-                        <div className="font-semibold">Вывести средства</div>
-                        <div className="text-xs text-muted-foreground">Быстрый вывод</div>
-                      </div>
-                    </div>
-                  </Button>
-                  <Button variant="outline" className="h-auto py-6 border-orange-500/30 hover:bg-orange-500/10">
-                    <div className="flex items-center gap-3">
-                      <Icon name="Gift" size={24} className="text-orange-500" />
-                      <div className="text-left">
-                        <div className="font-semibold">Бонусы</div>
-                        <div className="text-xs text-muted-foreground">Получить награды</div>
-                      </div>
-                    </div>
-                  </Button>
-                </div>
-              </Card>
-
-              <Card className="p-6">
-                <h2 className="text-xl font-semibold mb-6">Активность</h2>
-                <div className="space-y-4">
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-primary/20 flex items-center justify-center">
-                      <Icon name="TrendingUp" size={20} className="text-primary" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Активные вклады</p>
-                      <p className="text-xs text-muted-foreground">{stats.activeDeposits} депозитов</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold">${stats.totalInvested.toLocaleString()}</p>
-                    </div>
+            <Card className="p-5">
+              <h2 className="text-lg font-semibold mb-4">Быстрые действия</h2>
+              <div className="grid grid-cols-2 gap-3">
+                <Button 
+                  onClick={() => setDepositDialogOpen(true)}
+                  className="h-auto py-4 bg-gradient-to-r from-primary to-primary/80"
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <Icon name="Plus" size={20} />
+                    <span className="text-sm">Пополнить</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-green-500/20 flex items-center justify-center">
-                      <Icon name="DollarSign" size={20} className="text-green-500" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Суточный доход</p>
-                      <p className="text-xs text-muted-foreground">Автоматически</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold text-green-500">+${stats.dailyIncome}</p>
-                    </div>
+                </Button>
+                <Button 
+                  onClick={() => setWithdrawDialogOpen(true)}
+                  variant="outline" 
+                  className="h-auto py-4 border-green-500/30 hover:bg-green-500/10"
+                >
+                  <div className="flex flex-col items-center gap-1">
+                    <Icon name="ArrowUpRight" size={20} className="text-green-500" />
+                    <span className="text-sm">Вывести</span>
                   </div>
-                  <div className="flex items-center gap-3">
-                    <div className="h-10 w-10 rounded-full bg-secondary/20 flex items-center justify-center">
-                      <Icon name="Users" size={20} className="text-secondary" />
-                    </div>
-                    <div className="flex-1">
-                      <p className="text-sm font-medium">Реф. доход</p>
-                      <p className="text-xs text-muted-foreground">25% от вкладов</p>
-                    </div>
-                    <div className="text-right">
-                      <p className="text-sm font-semibold">${stats.referralEarnings.toLocaleString()}</p>
-                    </div>
-                  </div>
-                </div>
-              </Card>
-            </div>
-
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold">История операций</h2>
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <Icon name="Filter" size={16} />
-                  Фильтр
                 </Button>
               </div>
-              <div className="space-y-3">
-                {transactions.map((tx) => (
+            </Card>
+
+            <Card className="p-5">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-lg font-semibold">История операций</h2>
+                <Select value={filterType} onValueChange={setFilterType}>
+                  <SelectTrigger className="w-[140px] h-8">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">Все</SelectItem>
+                    <SelectItem value="deposit">Пополнения</SelectItem>
+                    <SelectItem value="profit">Начисления</SelectItem>
+                    <SelectItem value="withdrawal">Выводы</SelectItem>
+                    <SelectItem value="referral">Рефералы</SelectItem>
+                    <SelectItem value="bonus">Бонусы</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-2">
+                {filteredTransactions.slice(0, 5).map((tx) => (
                   <div
                     key={tx.id}
-                    className="flex items-center justify-between p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
+                    className="flex items-center justify-between p-3 rounded-lg bg-muted/30"
                   >
                     <div className="flex items-center gap-3">
                       <div
-                        className={`h-10 w-10 rounded-full flex items-center justify-center ${
-                          tx.type === "deposit"
-                            ? "bg-primary/20"
-                            : tx.type === "profit"
-                            ? "bg-green-500/20"
-                            : tx.type === "withdrawal"
-                            ? "bg-orange-500/20"
-                            : "bg-secondary/20"
+                        className={`h-9 w-9 rounded-full flex items-center justify-center ${
+                          tx.type === "deposit" ? "bg-primary/20" :
+                          tx.type === "profit" ? "bg-green-500/20" :
+                          tx.type === "withdrawal" ? "bg-orange-500/20" :
+                          tx.type === "bonus" ? "bg-yellow-500/20" :
+                          "bg-secondary/20"
                         }`}
                       >
                         <Icon
                           name={
-                            tx.type === "deposit"
-                              ? "ArrowDownToLine"
-                              : tx.type === "profit"
-                              ? "TrendingUp"
-                              : tx.type === "withdrawal"
-                              ? "ArrowUpRight"
-                              : "Users"
+                            tx.type === "deposit" ? "ArrowDownToLine" :
+                            tx.type === "profit" ? "TrendingUp" :
+                            tx.type === "withdrawal" ? "ArrowUpRight" :
+                            tx.type === "bonus" ? "Gift" :
+                            "Users"
                           }
-                          size={20}
+                          size={18}
                           className={
-                            tx.type === "deposit"
-                              ? "text-primary"
-                              : tx.type === "profit"
-                              ? "text-green-500"
-                              : tx.type === "withdrawal"
-                              ? "text-orange-500"
-                              : "text-secondary"
+                            tx.type === "deposit" ? "text-primary" :
+                            tx.type === "profit" ? "text-green-500" :
+                            tx.type === "withdrawal" ? "text-orange-500" :
+                            tx.type === "bonus" ? "text-yellow-500" :
+                            "text-secondary"
                           }
                         />
                       </div>
                       <div>
                         <p className="text-sm font-medium">
-                          {tx.type === "deposit"
-                            ? "Пополнение"
-                            : tx.type === "profit"
-                            ? "Начисление"
-                            : tx.type === "withdrawal"
-                            ? "Вывод средств"
-                            : "Реферальный доход"}
+                          {tx.type === "deposit" ? "Пополнение" :
+                           tx.type === "profit" ? "Начисление" :
+                           tx.type === "withdrawal" ? "Вывод" :
+                           tx.type === "bonus" ? "Бонус" :
+                           "Реферал"}
                         </p>
                         <p className="text-xs text-muted-foreground">{tx.date}</p>
                       </div>
                     </div>
                     <div className="text-right">
-                      <p
-                        className={`text-sm font-semibold ${
-                          tx.type === "withdrawal" ? "text-orange-500" : "text-green-500"
-                        }`}
-                      >
-                        {tx.type === "withdrawal" ? "-" : "+"}${tx.amount.toLocaleString()}
+                      <p className={`text-sm font-semibold ${
+                        tx.type === "withdrawal" ? "text-orange-500" : "text-green-500"
+                      }`}>
+                        {tx.type === "withdrawal" ? "-" : "+"}₽{tx.amount.toLocaleString()}
                       </p>
-                      <span
-                        className={`text-xs px-2 py-0.5 rounded-full ${
-                          tx.status === "completed"
-                            ? "bg-green-500/20 text-green-500"
-                            : "bg-yellow-500/20 text-yellow-500"
-                        }`}
-                      >
+                      <Badge variant={tx.status === "completed" ? "default" : "secondary"} className="text-xs">
                         {tx.status === "completed" ? "Завершено" : "В обработке"}
-                      </span>
+                      </Badge>
                     </div>
                   </div>
                 ))}
@@ -312,38 +308,32 @@ const Index = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="portfolio" className="space-y-6 animate-fade-in">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-                <div className="flex items-center gap-3 mb-2">
-                  <Icon name="PieChart" size={24} className="text-primary" />
-                  <span className="text-sm text-muted-foreground">Всего вложено</span>
-                </div>
-                <h3 className="text-3xl font-bold">${stats.totalInvested.toLocaleString()}</h3>
+          <TabsContent value="portfolio" className="space-y-4 animate-fade-in">
+            <div className="grid grid-cols-3 gap-3">
+              <Card className="p-4">
+                <Icon name="PieChart" size={20} className="text-primary mb-2" />
+                <p className="text-xs text-muted-foreground">Вложено</p>
+                <h3 className="text-lg font-bold">{stats.totalInvested.toLocaleString()}₽</h3>
               </Card>
-              <Card className="p-6 bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20">
-                <div className="flex items-center gap-3 mb-2">
-                  <Icon name="Activity" size={24} className="text-secondary" />
-                  <span className="text-sm text-muted-foreground">Активные депозиты</span>
-                </div>
-                <h3 className="text-3xl font-bold">{stats.activeDeposits}</h3>
+              <Card className="p-4">
+                <Icon name="Activity" size={20} className="text-secondary mb-2" />
+                <p className="text-xs text-muted-foreground">Депозитов</p>
+                <h3 className="text-lg font-bold">{stats.activeDeposits}</h3>
               </Card>
-              <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
-                <div className="flex items-center gap-3 mb-2">
-                  <Icon name="DollarSign" size={24} className="text-green-500" />
-                  <span className="text-sm text-muted-foreground">Суточный доход</span>
-                </div>
-                <h3 className="text-3xl font-bold text-green-500">${stats.dailyIncome}</h3>
+              <Card className="p-4">
+                <Icon name="DollarSign" size={20} className="text-green-500 mb-2" />
+                <p className="text-xs text-muted-foreground">В день</p>
+                <h3 className="text-lg font-bold text-green-500">{stats.dailyIncome}₽</h3>
               </Card>
             </div>
 
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-6">Калькулятор доходности</h2>
-              <div className="space-y-6">
+            <Card className="p-5">
+              <h2 className="text-lg font-semibold mb-4">Калькулятор доходности</h2>
+              <div className="space-y-4">
                 <div>
-                  <div className="flex justify-between mb-3">
-                    <span className="text-sm text-muted-foreground">Сумма инвестиции</span>
-                    <span className="text-lg font-semibold">${investmentAmount[0].toLocaleString()}</span>
+                  <div className="flex justify-between mb-2">
+                    <span className="text-sm text-muted-foreground">Сумма вклада</span>
+                    <span className="text-lg font-semibold">{investmentAmount[0].toLocaleString()}₽</span>
                   </div>
                   <Slider
                     value={investmentAmount}
@@ -351,7 +341,7 @@ const Index = () => {
                     min={100}
                     max={100000}
                     step={100}
-                    className="mb-4"
+                    className="mb-3"
                   />
                   <div className="grid grid-cols-4 gap-2">
                     {[1000, 5000, 10000, 50000].map((amount) => (
@@ -360,52 +350,52 @@ const Index = () => {
                         variant="outline"
                         size="sm"
                         onClick={() => setInvestmentAmount([amount])}
-                        className="text-xs"
+                        className="text-xs h-8"
                       >
-                        ${amount.toLocaleString()}
+                        {amount >= 1000 ? `${amount/1000}k` : amount}₽
                       </Button>
                     ))}
                   </div>
                 </div>
-                <div className="grid grid-cols-1 md:grid-cols-3 gap-4 p-4 rounded-lg bg-muted/30">
+                <div className="grid grid-cols-3 gap-3 p-4 rounded-lg bg-muted/30">
                   <div className="text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Доход за месяц</p>
-                    <p className="text-xl font-bold text-green-500">
-                      +${calculateProfit(investmentAmount[0])}
+                    <p className="text-xs text-muted-foreground mb-1">За месяц</p>
+                    <p className="text-base font-bold text-green-500">
+                      +{calculateProfit(investmentAmount[0])}₽
                     </p>
                   </div>
                   <div className="text-center">
-                    <p className="text-xs text-muted-foreground mb-1">Процент</p>
-                    <p className="text-xl font-bold text-primary">5.5% / день</p>
+                    <p className="text-xs text-muted-foreground mb-1">Ставка</p>
+                    <p className="text-base font-bold text-primary">10.6%</p>
                   </div>
                   <div className="text-center">
                     <p className="text-xs text-muted-foreground mb-1">Итого</p>
-                    <p className="text-xl font-bold">
-                      ${(investmentAmount[0] + Number(calculateProfit(investmentAmount[0]))).toLocaleString()}
+                    <p className="text-base font-bold">
+                      {(investmentAmount[0] + Number(calculateProfit(investmentAmount[0]))).toLocaleString()}₽
                     </p>
                   </div>
                 </div>
               </div>
             </Card>
 
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-6">Активные вклады</h2>
-              <div className="space-y-4">
+            <Card className="p-5">
+              <h2 className="text-lg font-semibold mb-4">Активные вклады</h2>
+              <div className="space-y-3">
                 {deposits.map((deposit) => (
                   <div key={deposit.id} className="p-4 rounded-lg bg-muted/30 space-y-3">
                     <div className="flex items-center justify-between">
                       <div>
-                        <p className="font-semibold text-lg">${deposit.amount.toLocaleString()}</p>
+                        <p className="font-semibold text-base">{deposit.amount.toLocaleString()}₽</p>
                         <p className="text-xs text-muted-foreground">Депозит #{deposit.id}</p>
                       </div>
                       <div className="text-right">
                         <p className="text-sm font-medium text-green-500">{deposit.rate}% / день</p>
-                        <p className="text-xs text-muted-foreground">{deposit.daysLeft} дней осталось</p>
+                        <p className="text-xs text-muted-foreground">{deposit.daysLeft} дней</p>
                       </div>
                     </div>
                     <div className="space-y-2">
                       <div className="flex justify-between text-sm">
-                        <span className="text-muted-foreground">Прогресс</span>
+                        <span className="text-muted-foreground">Заработано: {deposit.earned}₽</span>
                         <span className="font-medium">{deposit.progress}%</span>
                       </div>
                       <Progress value={deposit.progress} className="h-2" />
@@ -416,190 +406,298 @@ const Index = () => {
             </Card>
           </TabsContent>
 
-          <TabsContent value="wallet" className="space-y-6 animate-fade-in">
-            <Card className="p-6 bg-gradient-to-br from-primary/10 to-secondary/10 border-primary/20">
+          <TabsContent value="wallet" className="space-y-4 animate-fade-in">
+            <Card className="p-5 bg-gradient-to-br from-primary/10 to-secondary/10 border-primary/20">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <p className="text-sm text-muted-foreground mb-1">Основной счёт</p>
-                  <h2 className="text-4xl font-bold">${stats.balance.toLocaleString()}</h2>
+                  <p className="text-sm text-muted-foreground mb-1">Общий баланс</p>
+                  <h2 className="text-3xl font-bold">{stats.balance.toLocaleString()}₽</h2>
+                  <p className="text-xs text-green-500 mt-1">Доступно: {stats.availableBalance.toFixed(2)}₽</p>
                 </div>
-                <div className="h-16 w-16 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
-                  <Icon name="Wallet" size={32} className="text-white" />
+                <div className="h-14 w-14 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center">
+                  <Icon name="Wallet" size={28} className="text-white" />
                 </div>
               </div>
-              <div className="flex gap-3">
-                <Button className="flex-1 bg-gradient-to-r from-primary to-primary/80">
+              <div className="grid grid-cols-2 gap-3">
+                <Button 
+                  onClick={() => setDepositDialogOpen(true)}
+                  className="bg-gradient-to-r from-primary to-primary/80"
+                >
                   <Icon name="Plus" size={18} className="mr-2" />
                   Пополнить
                 </Button>
-                <Button variant="outline" className="flex-1 border-green-500/30 hover:bg-green-500/10">
+                <Button 
+                  onClick={() => setWithdrawDialogOpen(true)}
+                  variant="outline" 
+                  className="border-green-500/30 hover:bg-green-500/10"
+                >
                   <Icon name="ArrowUpRight" size={18} className="mr-2 text-green-500" />
                   Вывести
                 </Button>
               </div>
             </Card>
 
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="p-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <Icon name="ArrowDownToLine" size={20} className="text-secondary" />
-                  <span className="text-sm text-muted-foreground">Пополнено</span>
-                </div>
-                <h3 className="text-2xl font-bold">${(stats.totalInvested + 35000).toLocaleString()}</h3>
+            <div className="grid grid-cols-3 gap-3">
+              <Card className="p-4">
+                <Icon name="ArrowDownToLine" size={18} className="text-secondary mb-2" />
+                <p className="text-xs text-muted-foreground">Пополнено</p>
+                <h3 className="text-base font-bold">{(stats.totalInvested + 35000).toLocaleString()}₽</h3>
               </Card>
-              <Card className="p-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <Icon name="ArrowUpRight" size={20} className="text-green-500" />
-                  <span className="text-sm text-muted-foreground">Выведено</span>
-                </div>
-                <h3 className="text-2xl font-bold">${stats.withdrawn.toLocaleString()}</h3>
+              <Card className="p-4">
+                <Icon name="ArrowUpRight" size={18} className="text-green-500 mb-2" />
+                <p className="text-xs text-muted-foreground">Выведено</p>
+                <h3 className="text-base font-bold">{stats.withdrawn.toLocaleString()}₽</h3>
               </Card>
-              <Card className="p-6">
-                <div className="flex items-center gap-3 mb-2">
-                  <Icon name="Clock" size={20} className="text-yellow-500" />
-                  <span className="text-sm text-muted-foreground">В ожидании</span>
-                </div>
-                <h3 className="text-2xl font-bold">$2,000</h3>
+              <Card className="p-4">
+                <Icon name="Clock" size={18} className="text-yellow-500 mb-2" />
+                <p className="text-xs text-muted-foreground">Ожидание</p>
+                <h3 className="text-base font-bold">2,000₽</h3>
               </Card>
             </div>
 
-            <Card className="p-6">
-              <div className="flex items-center justify-between mb-6">
-                <h2 className="text-xl font-semibold">Методы пополнения</h2>
-                <Button variant="ghost" size="sm" className="gap-2">
-                  <Icon name="Plus" size={16} />
-                  Добавить
-                </Button>
-              </div>
+            <Card className="p-5">
+              <h2 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Icon name="Users" size={20} />
+                Партнёрская программа
+              </h2>
               <div className="space-y-3">
-                <div className="p-4 rounded-lg border border-border hover:border-primary/50 transition-colors cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-blue-500 to-blue-600 flex items-center justify-center">
-                        <Icon name="CreditCard" size={24} className="text-white" />
-                      </div>
-                      <div>
-                        <p className="font-semibold">Банковская карта</p>
-                        <p className="text-sm text-muted-foreground">Visa, MasterCard, Мир</p>
-                      </div>
+                <div className="p-3 rounded-lg bg-primary/10 border border-primary/20">
+                  <p className="text-sm mb-2 flex items-center gap-2">
+                    <Icon name="Link" size={16} />
+                    Ваша реферальная ссылка
+                  </p>
+                  <div className="flex gap-2">
+                    <div className="flex-1 p-2 rounded bg-muted/50 text-xs font-mono break-all">
+                      t.me/InvestPassiveBot?start=ref_JD4521
                     </div>
-                    <Icon name="ChevronRight" size={20} className="text-muted-foreground" />
+                    <Button size="sm" variant="outline" onClick={() => {
+                      navigator.clipboard.writeText("t.me/InvestPassiveBot?start=ref_JD4521");
+                      toast({ title: "Скопировано!" });
+                    }}>
+                      <Icon name="Copy" size={16} />
+                    </Button>
                   </div>
                 </div>
-                <div className="p-4 rounded-lg border border-border hover:border-primary/50 transition-colors cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-orange-500 to-orange-600 flex items-center justify-center">
-                        <span className="text-white font-bold text-lg">₽</span>
-                      </div>
-                      <div>
-                        <p className="font-semibold">СБП</p>
-                        <p className="text-sm text-muted-foreground">Система быстрых платежей</p>
-                      </div>
-                    </div>
-                    <Icon name="ChevronRight" size={20} className="text-muted-foreground" />
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="p-3 rounded-lg bg-secondary/10">
+                    <p className="text-xs text-muted-foreground mb-1">Приглашено</p>
+                    <p className="text-2xl font-bold">{stats.partners}</p>
                   </div>
-                </div>
-                <div className="p-4 rounded-lg border border-border hover:border-primary/50 transition-colors cursor-pointer">
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center gap-3">
-                      <div className="h-12 w-12 rounded-lg bg-gradient-to-br from-green-500 to-green-600 flex items-center justify-center">
-                        <span className="text-white font-bold text-sm">USDT</span>
-                      </div>
-                      <div>
-                        <p className="font-semibold">Криптовалюта</p>
-                        <p className="text-sm text-muted-foreground">USDT, TON, ETH</p>
-                      </div>
-                    </div>
-                    <Icon name="ChevronRight" size={20} className="text-muted-foreground" />
+                  <div className="p-3 rounded-lg bg-green-500/10">
+                    <p className="text-xs text-muted-foreground mb-1">Заработано</p>
+                    <p className="text-2xl font-bold text-green-500">{stats.referralEarnings.toLocaleString()}₽</p>
                   </div>
                 </div>
               </div>
             </Card>
-          </TabsContent>
 
-          <TabsContent value="referral" className="space-y-6 animate-fade-in">
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              <Card className="p-6 bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20">
-                <div className="flex items-center gap-3 mb-2">
-                  <Icon name="Users" size={24} className="text-secondary" />
-                  <span className="text-sm text-muted-foreground">Всего партнёров</span>
-                </div>
-                <h3 className="text-3xl font-bold">{stats.partners}</h3>
-              </Card>
-              <Card className="p-6 bg-gradient-to-br from-green-500/10 to-green-500/5 border-green-500/20">
-                <div className="flex items-center gap-3 mb-2">
-                  <Icon name="UserCheck" size={24} className="text-green-500" />
-                  <span className="text-sm text-muted-foreground">Активных</span>
-                </div>
-                <h3 className="text-3xl font-bold text-green-500">{stats.activeReferrals}</h3>
-              </Card>
-              <Card className="p-6 bg-gradient-to-br from-primary/10 to-primary/5 border-primary/20">
-                <div className="flex items-center gap-3 mb-2">
-                  <Icon name="DollarSign" size={24} className="text-primary" />
-                  <span className="text-sm text-muted-foreground">Общий доход</span>
-                </div>
-                <h3 className="text-3xl font-bold">${stats.referralEarnings.toLocaleString()}</h3>
-              </Card>
-            </div>
-
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-4">Ваша реферальная ссылка</h2>
-              <div className="flex gap-3">
-                <div className="flex-1 p-4 rounded-lg bg-muted/30 font-mono text-sm break-all">
-                  t.me/PassiveCapitalBot/play?startapp=ref_JD4521
-                </div>
-                <Button className="gap-2">
-                  <Icon name="Copy" size={18} />
-                  Копировать
-                </Button>
-              </div>
-              <div className="mt-4 p-4 rounded-lg bg-primary/10 border border-primary/20">
-                <p className="text-sm">
-                  <Icon name="Info" size={16} className="inline mr-2" />
-                  Получайте <span className="font-semibold text-primary">25% от каждого депозита</span> ваших
-                  рефералов
-                </p>
-              </div>
-            </Card>
-
-            <Card className="p-6">
-              <h2 className="text-xl font-semibold mb-6">Ваши партнёры</h2>
-              <div className="space-y-3">
-                {referrals.map((ref) => (
-                  <div
-                    key={ref.id}
-                    className="p-4 rounded-lg bg-muted/30 hover:bg-muted/50 transition-colors"
-                  >
-                    <div className="flex items-center justify-between">
-                      <div className="flex items-center gap-3">
-                        <div className="h-12 w-12 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-sm font-semibold">
-                          {ref.username.slice(0, 2).toUpperCase()}
-                        </div>
-                        <div>
-                          <p className="font-semibold flex items-center gap-2">
-                            {ref.username}
-                            {ref.active && (
-                              <span className="h-2 w-2 rounded-full bg-green-500"></span>
-                            )}
-                          </p>
-                          <p className="text-sm text-muted-foreground">С {ref.date}</p>
-                        </div>
+            <Card className="p-5">
+              <h2 className="text-lg font-semibold mb-4">Последние рефералы</h2>
+              <div className="space-y-2">
+                {referrals.slice(0, 5).map((ref) => (
+                  <div key={ref.id} className="p-3 rounded-lg bg-muted/30 flex items-center justify-between">
+                    <div className="flex items-center gap-3">
+                      <div className="h-10 w-10 rounded-full bg-gradient-to-br from-primary to-secondary flex items-center justify-center text-xs font-semibold">
+                        {ref.username.slice(5, 7)}
                       </div>
-                      <div className="text-right">
-                        <p className="font-semibold">${ref.earnings.toLocaleString()}</p>
-                        <p className="text-sm text-muted-foreground">
-                          Вклады: ${ref.deposits.toLocaleString()}
+                      <div>
+                        <p className="text-sm font-semibold flex items-center gap-2">
+                          {ref.username}
+                          {ref.active && <span className="h-2 w-2 rounded-full bg-green-500"></span>}
                         </p>
+                        <p className="text-xs text-muted-foreground">С {ref.date}</p>
                       </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="text-sm font-semibold">+{ref.earnings.toLocaleString()}₽</p>
                     </div>
                   </div>
                 ))}
               </div>
             </Card>
           </TabsContent>
+
+          <TabsContent value="bonuses" className="space-y-4 animate-fade-in">
+            <Card className="p-5 bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border-yellow-500/20">
+              <div className="flex items-center gap-3 mb-3">
+                <div className="h-12 w-12 rounded-full bg-gradient-to-br from-yellow-500 to-orange-500 flex items-center justify-center">
+                  <Icon name="Gift" size={24} className="text-white" />
+                </div>
+                <div>
+                  <h2 className="text-xl font-bold">Бонусная программа</h2>
+                  <p className="text-sm text-muted-foreground">Выполняй задания — получай рубли</p>
+                </div>
+              </div>
+            </Card>
+
+            <div className="space-y-3">
+              {bonusTasks.map((task) => (
+                <Card key={task.id} className="p-5">
+                  <div className="flex items-start justify-between mb-3">
+                    <div className="flex items-start gap-3">
+                      <div className={`h-12 w-12 rounded-full flex items-center justify-center ${
+                        task.completed ? "bg-green-500/20" : "bg-primary/20"
+                      }`}>
+                        <Icon 
+                          name={task.icon as any} 
+                          size={24} 
+                          className={task.completed ? "text-green-500" : "text-primary"} 
+                        />
+                      </div>
+                      <div>
+                        <h3 className="font-semibold mb-1">{task.title}</h3>
+                        {task.progress !== undefined && (
+                          <p className="text-sm text-muted-foreground mb-2">
+                            Прогресс: {task.progress} / {task.target}
+                          </p>
+                        )}
+                        <div className="flex items-center gap-2">
+                          <Badge variant="secondary" className="bg-green-500/20 text-green-500">
+                            +{task.reward}₽
+                          </Badge>
+                          {task.completed && (
+                            <Badge className="bg-green-500">Выполнено</Badge>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                  {task.progress !== undefined && (
+                    <Progress value={(task.progress / task.target) * 100} className="h-2 mb-3" />
+                  )}
+                  <Button 
+                    className="w-full" 
+                    variant={task.completed ? "outline" : "default"}
+                    disabled={task.completed}
+                    onClick={() => {
+                      if (task.id === "chat") {
+                        window.open("https://t.me/invest_passive_chat", "_blank");
+                        toast({
+                          title: "Проверка подписки",
+                          description: "Проверяем вашу подписку на чат...",
+                        });
+                      }
+                    }}
+                  >
+                    {task.completed ? "Получено" : task.id === "chat" ? "Вступить в чат" : "Пригласить друзей"}
+                  </Button>
+                </Card>
+              ))}
+            </div>
+
+            <Card className="p-5 bg-gradient-to-br from-primary/10 to-secondary/10">
+              <div className="flex items-center gap-3 mb-3">
+                <Icon name="Info" size={20} className="text-primary" />
+                <h3 className="font-semibold">Условия бонусов</h3>
+              </div>
+              <ul className="space-y-2 text-sm text-muted-foreground">
+                <li className="flex items-start gap-2">
+                  <Icon name="Check" size={16} className="text-green-500 mt-0.5" />
+                  <span>Бонус за чат активируется автоматически после проверки</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Icon name="Check" size={16} className="text-green-500 mt-0.5" />
+                  <span>За 25 активных рефералов вы получите 2000₽ на баланс</span>
+                </li>
+                <li className="flex items-start gap-2">
+                  <Icon name="Check" size={16} className="text-green-500 mt-0.5" />
+                  <span>Все бонусы можно использовать для инвестирования</span>
+                </li>
+              </ul>
+            </Card>
+          </TabsContent>
         </Tabs>
       </div>
+
+      <Dialog open={depositDialogOpen} onOpenChange={setDepositDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Icon name="Plus" size={20} />
+              Пополнение баланса
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div>
+              <Label htmlFor="amount">Сумма пополнения (₽)</Label>
+              <Input
+                id="amount"
+                type="number"
+                placeholder="Минимум 100₽"
+                value={depositAmount}
+                onChange={(e) => setDepositAmount(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div className="p-4 rounded-lg bg-muted/50 space-y-2">
+              <p className="text-sm font-medium">Реквизиты для оплаты:</p>
+              <div className="p-3 rounded bg-background">
+                <p className="text-lg font-mono font-bold text-center">2202 2063 4578 9012</p>
+              </div>
+              <p className="text-xs text-muted-foreground">
+                Переведите указанную сумму на эту карту и нажмите "Проверить оплату"
+              </p>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="outline" onClick={() => setDepositDialogOpen(false)}>
+                Отмена
+              </Button>
+              <Button onClick={handleDeposit}>
+                Проверить оплату
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={withdrawDialogOpen} onOpenChange={setWithdrawDialogOpen}>
+        <DialogContent className="sm:max-w-md">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2">
+              <Icon name="ArrowUpRight" size={20} />
+              Вывод средств
+            </DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="p-3 rounded-lg bg-green-500/10 border border-green-500/20">
+              <p className="text-sm text-muted-foreground mb-1">Доступно для вывода</p>
+              <p className="text-2xl font-bold text-green-500">{stats.availableBalance.toFixed(2)}₽</p>
+              <p className="text-xs text-muted-foreground mt-1">Только заработанные проценты</p>
+            </div>
+            <div>
+              <Label htmlFor="withdrawAmount">Сумма вывода (₽)</Label>
+              <Input
+                id="withdrawAmount"
+                type="number"
+                placeholder="Минимум 100₽"
+                value={withdrawAmount}
+                onChange={(e) => setWithdrawAmount(e.target.value)}
+                className="mt-1"
+              />
+            </div>
+            <div>
+              <Label htmlFor="cardNumber">Номер карты</Label>
+              <Input
+                id="cardNumber"
+                type="text"
+                placeholder="0000 0000 0000 0000"
+                value={withdrawCard}
+                onChange={(e) => setWithdrawCard(e.target.value)}
+                maxLength={19}
+                className="mt-1"
+              />
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <Button variant="outline" onClick={() => setWithdrawDialogOpen(false)}>
+                Отмена
+              </Button>
+              <Button onClick={handleWithdraw} className="bg-green-500 hover:bg-green-600">
+                Вывести
+              </Button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
     </div>
   );
 };
