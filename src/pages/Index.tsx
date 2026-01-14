@@ -23,6 +23,9 @@ const Index = () => {
   const [filterType, setFilterType] = useState("all");
   const { toast } = useToast();
 
+  const userRefCode = "JD4521";
+  const referralLink = `t.me/InvestPassiveBot?start=ref_${userRefCode}`;
+
   const stats = {
     balance: 125430.50,
     availableBalance: 8450.30,
@@ -468,10 +471,10 @@ const Index = () => {
                   </p>
                   <div className="flex gap-2">
                     <div className="flex-1 p-2 rounded bg-muted/50 text-xs font-mono break-all">
-                      t.me/InvestPassiveBot?start=ref_JD4521
+                      {referralLink}
                     </div>
                     <Button size="sm" variant="outline" onClick={() => {
-                      navigator.clipboard.writeText("t.me/InvestPassiveBot?start=ref_JD4521");
+                      navigator.clipboard.writeText(referralLink);
                       toast({ title: "Скопировано!" });
                     }}>
                       <Icon name="Copy" size={16} />
@@ -575,6 +578,14 @@ const Index = () => {
                         toast({
                           title: "Проверка подписки",
                           description: "Проверяем вашу подписку на чат...",
+                        });
+                      } else if (task.id === "referrals") {
+                        const shareText = `💎 Присоединяйся к Invest Passive!\n\n🚀 Пассивный доход 10.6% в день\n💰 Стабильные выплаты\n🎁 Бонусы за регистрацию\n\n👉 ${referralLink}`;
+                        const telegramShareUrl = `https://t.me/share/url?url=${encodeURIComponent(referralLink)}&text=${encodeURIComponent(shareText)}`;
+                        window.open(telegramShareUrl, "_blank");
+                        toast({
+                          title: "Поделиться ссылкой",
+                          description: "Отправь ссылку друзьям в Telegram!",
                         });
                       }
                     }}
