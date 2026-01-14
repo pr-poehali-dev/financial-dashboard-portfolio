@@ -1,0 +1,16 @@
+{
+  "tests": [
+    {
+      "name": "Get settings",
+      "method": "GET",
+      "path": "/?action=settings",
+      "expectedStatus": 200,
+      "expectedBody": {
+        "settings": {
+          "payment_card": "string"
+        }
+      },
+      "bodyMatcher": "partial"
+    }
+  ]
+}
